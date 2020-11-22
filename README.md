@@ -4,6 +4,8 @@ This repository contains an updated version of the embedding comparator code, or
 
 ### Embedding Comparator Demo
 
+![demo](/images/demo.png)
+
 #### Live Demo
 
 A demo of the Embedding Comparator is available at: <http://vis.mit.edu/embedding-comparator/>
