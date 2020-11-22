@@ -13,8 +13,8 @@ Note: this script should be used to preprocess each model independently.
 Example usage:
 python preprocess_data.py --base_embeddings_file='model1.bin' \
     --embeddings_file='model2.bin' \
-    --base_outfile='data/new/model1.json' \
-    --outfile='data/new/model2.json' \
+    --base_outfile='data/psychiatry/bipolar_cord.json' \
+    --outfile='data/psychiatry/bipolar_all.json' \
     --max_k=250
 """
 
@@ -52,6 +52,7 @@ METRICS = ['cosine', 'euclidean']
 
 FLAGS = flags.FLAGS
 
+flags.DEFINE_string('vocab_file', '', "Keep embeddings only for these words.")
 flags.DEFINE_string('method', 'pca', "Method for dimensionality reduction ('pca','tsne','umap').")
 flags.DEFINE_integer(
     'max_k',
@@ -64,7 +65,12 @@ flags.DEFINE_string('base_outfile', None, 'Path to write base preprocessed data 
 flags.DEFINE_string('outfile', None, 'Path to write preprocessed data (json).')
 
 
-def load_words_embeddings(filepath, base_file):
+# intersection of two lists using set() method
+def intersection(lst1, lst2):
+    return list(set(lst1) & set(lst2))
+
+
+def load_words_embeddings(filepath, base_file, vocab_file=""):
     # cap_path = datapath(filepath)
     model = load_facebook_vectors(filepath)
 
@@ -74,16 +80,26 @@ def load_words_embeddings(filepath, base_file):
     embeddings = []
 
     if base_file:
+
         vocab = model.vocab
+
         f = open('words.txt', 'w')
 
-        print("Initial vocab length: "+str(len(vocab)))
-        new_vocab = []
-        for word in vocab:
-            word = re.sub(r'[^a-z-_]+', '', word.lower())
-            word = word.strip()
-            if word not in new_vocab and word not in stop_words and word!="" and len(word)>2:
+        if vocab_file!="":
+            given_vocab = load_words(vocab_file)
+
+            new_vocab = []
+            for word in given_vocab:
                 new_vocab.append(word)
+
+        else:
+            print("Initial vocab length: "+str(len(vocab)))
+            new_vocab = []
+            for word in vocab:
+                word = re.sub(r'[^a-z-_]+', '', word.lower())
+                word = word.strip()
+                if word not in new_vocab and word not in stop_words and word!="" and len(word)>2:
+                    new_vocab.append(word)
 
         vocab = new_vocab
         print("Processed vocab length: "+str(len(vocab)))
@@ -94,9 +110,7 @@ def load_words_embeddings(filepath, base_file):
         f.close()
 
     else:
-        f = open('words.txt', 'r')
-        vocab = f.readlines()
-        f.close()
+        vocab = load_words('words.txt')
         vocab = [word.strip("\n") for word in vocab]
         for word in vocab:
             words.append(word)
@@ -175,9 +189,10 @@ def main(argv):
     base_embeddings_file = FLAGS.base_embeddings_file
     base_outfile_path = FLAGS.base_outfile
     max_k = FLAGS.max_k
+    vocab_file = FLAGS.vocab_file
 
     # Load embeddings and words from file.
-    words, embeddings = load_words_embeddings(base_embeddings_file, True)
+    words, embeddings = load_words_embeddings(base_embeddings_file, True, vocab_file)
     # words = load_words(metadata_file)
 
     # Compute nearest neighbors.
@@ -215,6 +230,7 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    # flags.mark_flag_as_required('vocab_file')
     flags.mark_flag_as_required('base_embeddings_file')
     flags.mark_flag_as_required('embeddings_file')
     # flags.mark_flag_as_required('metadata_file')
